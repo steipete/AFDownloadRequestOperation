@@ -14,7 +14,6 @@ With partially resumed files, the progress delegate needs additional info. The s
 ``` objective-c
     [pdfRequest setProgressiveDownloadProgressBlock:^(NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile) {
         self.downloadProgress = totalBytesReadForFile/(float)totalBytesExpectedToReadForFile;
-
     }];
 ```
 
