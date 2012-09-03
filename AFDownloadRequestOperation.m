@@ -38,6 +38,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 }
 @property (nonatomic, strong) NSString *tempPath;
 @property (assign) long long totalContentLength;
+@property (nonatomic, assign) long long totalBytesReadPerDownload;
 @property (assign) long long offsetContentLength;
 @property (nonatomic, copy) AFURLConnectionProgressiveOperationProgressBlock progressiveDownloadProgress;
 @end
@@ -249,7 +250,8 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
             }
         }
     }
-    
+
+    self.totalBytesReadPerDownload = 0;
     self.offsetContentLength = MAX(fileOffset, 0);
     self.totalContentLength = totalContentLength;
     [self.outputStream setProperty:[NSNumber numberWithLongLong:_offsetContentLength] forKey:NSStreamFileCurrentOffsetKey];
@@ -257,9 +259,12 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
     [super connection:connection didReceiveData:data];
-    
+
+    // track custom bytes read because totalBytesRead persists between pause/resume.
+    self.totalBytesReadPerDownload += [data length];
+
     if (self.progressiveDownloadProgress) {
-        self.progressiveDownloadProgress((long long)[data length], self.totalBytesRead, self.response.expectedContentLength,self.totalBytesRead + self.offsetContentLength, self.totalContentLength);
+        self.progressiveDownloadProgress((long long)[data length], self.totalBytesRead, self.response.expectedContentLength,self.totalBytesReadPerDownload + self.offsetContentLength, self.totalContentLength);
     }
 }
 
