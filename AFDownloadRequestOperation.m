@@ -195,7 +195,9 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
                 }
             }
             return;
-        }else {
+
+        // loss of network connections = error set, but not cancel
+        }else if(!self.error) {
             // move file to final position and capture error        
             @synchronized(self) {
                 [[NSFileManager new] moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
