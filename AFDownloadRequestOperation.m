@@ -85,7 +85,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 - (unsigned long long)fileSizeForPath:(NSString *)path {
     signed long long fileSize = 0;
     NSFileManager *fileManager = [NSFileManager new]; // not thread safe
-    if ([[NSFileManager new] fileExistsAtPath:path]) {
+    if ([fileManager fileExistsAtPath:path]) {
         NSError *error = nil;
         NSDictionary *fileDict = [fileManager attributesOfItemAtPath:path error:&error];
         if (!error && fileDict) {
