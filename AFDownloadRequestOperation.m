@@ -1,17 +1,17 @@
 // AFDownloadRequestOperation.m
 //
 // Copyright (c) 2012 Peter Steinberger (http://petersteinberger.com)
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,6 +25,10 @@
 #import <CommonCrypto/CommonDigest.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#if !__has_feature(objc_arc)
+#error "Compile this file with ARC"
+#endif
 
 @interface AFURLConnectionOperation (AFInternal)
 @property (nonatomic, strong) NSURLRequest *request;
@@ -61,7 +65,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     dispatch_once(&onceToken, ^{
         NSString *cacheDir = NSTemporaryDirectory();
         cacheFolder = [cacheDir stringByAppendingPathComponent:kAFNetworkingIncompleteDownloadFolderName];
-        
+
         // ensure all cache directories are there (needed only once)
         NSError *error = nil;
         if(![[NSFileManager new] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
@@ -101,12 +105,12 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     if ((self = [super initWithRequest:urlRequest])) {
         NSParameterAssert(targetPath != nil && urlRequest != nil);
         _shouldResume = shouldResume;
-        
+
         // we assume that at least the directory has to exist on the targetPath
         BOOL isDirectory;
         if(![[NSFileManager defaultManager] fileExistsAtPath:targetPath isDirectory:&isDirectory]) {
             isDirectory = NO;
-        }        
+        }
         // if targetPath is a directory, use the file name we got from the urlRequest.
         if (isDirectory) {
             NSString *fileName = [urlRequest.URL lastPathComponent];
@@ -114,10 +118,10 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         }else {
             _targetPath = targetPath;
         }
-        
+
         // download is saved into a temporal file and remaned upon completion
         NSString *tempPath = [self tempPath];
-        
+
         // do we need to resume the file?
         BOOL isResuming = NO;
         if (shouldResume) {
@@ -130,7 +134,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
                 isResuming = YES;
             }
         }
-        
+
         // try to create/open a file at the target location
         if (!isResuming) {
             int fileDescriptor = open([tempPath UTF8String], O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -138,14 +142,14 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
                 close(fileDescriptor);
             }
         }
-        
+
         self.outputStream = [NSOutputStream outputStreamToFileAtPath:tempPath append:isResuming];
-        
+
         // if the output stream can't be created, instantly destroy the object.
         if (!self.outputStream) {
             return nil;
         }
-    }    
+    }
     return self;
 }
 
@@ -198,7 +202,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
         // loss of network connections = error set, but not cancel
         }else if(!self.error) {
-            // move file to final position and capture error        
+            // move file to final position and capture error
             @synchronized(self) {
                 [[NSFileManager new] moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
                 if (localError) {
@@ -206,7 +210,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
                 }
             }
         }
-        
+
         if (self.error) {
             dispatch_async(self.failureCallbackQueue ?: dispatch_get_main_queue(), ^{
                 failure(self, self.error);
@@ -232,13 +236,13 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
     [super connection:connection didReceiveResponse:response];
-    
+
     // check if we have the correct response
     NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
     if (![httpResponse isKindOfClass:[NSHTTPURLResponse class]]) {
         return;
     }
-    
+
     // check for valid response to resume the download if possible
     long long totalContentLength = self.response.expectedContentLength;
     long long fileOffset = 0;
