@@ -176,7 +176,9 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
             // move file to final position and capture error
             @synchronized(self) {
                 NSFileManager *fileManager = [NSFileManager new];
-                [fileManager removeItemAtPath:_targetPath error:NULL]; // avoid "File exists" error
+                if (self.shouldOverwrite) {
+                    [fileManager removeItemAtPath:_targetPath error:NULL]; // avoid "File exists" error
+                }
                 [fileManager moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
                 if (localError) {
                     _fileError = localError;
