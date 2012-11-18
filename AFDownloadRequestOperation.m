@@ -49,56 +49,6 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
 @implementation AFDownloadRequestOperation
 
-@synthesize targetPath = _targetPath;
-@synthesize tempPath = _tempPath;
-@synthesize totalContentLength = _totalContentLength;
-@synthesize offsetContentLength = _offsetContentLength;
-@synthesize shouldResume = _shouldResume;
-@synthesize deleteTempFileOnCancel = _deleteTempFileOnCancel;
-@synthesize progressiveDownloadProgress = _progressiveDownloadProgress;
-
-#pragma mark - Static
-
-+ (NSString *)cacheFolder {
-    static NSString *cacheFolder;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        NSString *cacheDir = NSTemporaryDirectory();
-        cacheFolder = [cacheDir stringByAppendingPathComponent:kAFNetworkingIncompleteDownloadFolderName];
-
-        // ensure all cache directories are there (needed only once)
-        NSError *error = nil;
-        if(![[NSFileManager new] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
-            NSLog(@"Failed to create cache directory at %@", cacheFolder);
-        }
-    });
-    return cacheFolder;
-}
-
-// calculates the MD5 hash of a key
-+ (NSString *)md5StringForString:(NSString *)string {
-    const char *str = [string UTF8String];
-    unsigned char r[CC_MD5_DIGEST_LENGTH];
-    CC_MD5(str, strlen(str), r);
-    return [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-            r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[15]];
-}
-
-#pragma mark - Private
-
-- (unsigned long long)fileSizeForPath:(NSString *)path {
-    signed long long fileSize = 0;
-    NSFileManager *fileManager = [NSFileManager new]; // not thread safe
-    if ([fileManager fileExistsAtPath:path]) {
-        NSError *error = nil;
-        NSDictionary *fileDict = [fileManager attributesOfItemAtPath:path error:&error];
-        if (!error && fileDict) {
-            fileSize = [fileDict fileSize];
-        }
-    }
-    return fileSize;
-}
-
 #pragma mark - NSObject
 
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume {
@@ -106,51 +56,52 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         NSParameterAssert(targetPath != nil && urlRequest != nil);
         _shouldResume = shouldResume;
 
-        // we assume that at least the directory has to exist on the targetPath
+        // Ee assume that at least the directory has to exist on the targetPath
         BOOL isDirectory;
         if(![[NSFileManager defaultManager] fileExistsAtPath:targetPath isDirectory:&isDirectory]) {
             isDirectory = NO;
         }
-        // if targetPath is a directory, use the file name we got from the urlRequest.
+        // \If targetPath is a directory, use the file name we got from the urlRequest.
         if (isDirectory) {
             NSString *fileName = [urlRequest.URL lastPathComponent];
-            _targetPath = [NSString pathWithComponents:[NSArray arrayWithObjects:targetPath, fileName, nil]];
+            _targetPath = [NSString pathWithComponents:@[targetPath, fileName]];
         }else {
             _targetPath = targetPath;
         }
 
-        // download is saved into a temporal file and remaned upon completion
+        // Download is saved into a temorary file and renamed upon completion.
         NSString *tempPath = [self tempPath];
 
-        // do we need to resume the file?
-        BOOL isResuming = NO;
-        if (shouldResume) {
-            unsigned long long downloadedBytes = [self fileSizeForPath:tempPath];
-            if (downloadedBytes > 0) {
-                NSMutableURLRequest *mutableURLRequest = [urlRequest mutableCopy];
-                NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
-                [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
-                self.request = mutableURLRequest;
-                isResuming = YES;
-            }
-        }
-
-        // try to create/open a file at the target location
+        // Do we need to resume the file?
+        BOOL isResuming = [self updateByteStartRangeForRequest];
+        
+        // Try to create/open a file at the target location
         if (!isResuming) {
             int fileDescriptor = open([tempPath UTF8String], O_CREAT | O_EXCL | O_RDWR, 0666);
-            if (fileDescriptor > 0) {
-                close(fileDescriptor);
-            }
+            if (fileDescriptor > 0) close(fileDescriptor);
         }
 
         self.outputStream = [NSOutputStream outputStreamToFileAtPath:tempPath append:isResuming];
-
-        // if the output stream can't be created, instantly destroy the object.
-        if (!self.outputStream) {
-            return nil;
-        }
+        // If the output stream can't be created, instantly destroy the object.
+        if (!self.outputStream) return nil;
     }
     return self;
+}
+
+// updates the current request to set the correct start-byte-range.
+- (BOOL)updateByteStartRangeForRequest {
+    BOOL isResuming = NO;
+    if (self.shouldResume) {
+        unsigned long long downloadedBytes = [self fileSizeForPath:[self tempPath]];
+        if (downloadedBytes > 0) {
+            NSMutableURLRequest *mutableURLRequest = [self.request mutableCopy];
+            NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
+            [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
+            self.request = mutableURLRequest;
+            isResuming = YES;
+        }
+    }
+    return isResuming;
 }
 
 #pragma mark - Public
@@ -181,7 +132,27 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     self.progressiveDownloadProgress = block;
 }
 
+#pragma mark - Private
+
+- (unsigned long long)fileSizeForPath:(NSString *)path {
+    signed long long fileSize = 0;
+    NSFileManager *fileManager = [NSFileManager new]; // default is not thread safe
+    if ([fileManager fileExistsAtPath:path]) {
+        NSError *error = nil;
+        NSDictionary *fileDict = [fileManager attributesOfItemAtPath:path error:&error];
+        if (!error && fileDict) {
+            fileSize = [fileDict fileSize];
+        }
+    }
+    return fileSize;
+}
+
 #pragma mark - AFURLRequestOperation
+
+- (void)pause {
+    [super pause];
+    [self updateByteStartRangeForRequest];
+}
 
 - (void)setCompletionBlockWithSuccess:(void (^)(AFHTTPRequestOperation *operation, id responseObject))success
                               failure:(void (^)(AFHTTPRequestOperation *operation, NSError *error))failure
@@ -225,11 +196,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 }
 
 - (NSError *)error {
-    if (_fileError) {
-        return _fileError;
-    } else {
-        return [super error];
-    }
+    return _fileError ?: [super error];
 }
 
 #pragma mark - NSURLConnectionDelegate
@@ -239,9 +206,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
     // check if we have the correct response
     NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-    if (![httpResponse isKindOfClass:[NSHTTPURLResponse class]]) {
-        return;
-    }
+    if (![httpResponse isKindOfClass:[NSHTTPURLResponse class]]) return;
 
     // check for valid response to resume the download if possible
     long long totalContentLength = self.response.expectedContentLength;
@@ -251,8 +216,8 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         if ([contentRange hasPrefix:@"bytes"]) {
             NSArray *bytes = [contentRange componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" -/"]];
             if ([bytes count] == 4) {
-                fileOffset = [[bytes objectAtIndex:1] longLongValue];
-                totalContentLength = [[bytes objectAtIndex:2] longLongValue]; // if this is *, it's converted to 0
+                fileOffset = [bytes[1] longLongValue];
+                totalContentLength = [bytes[2] longLongValue]; // if this is *, it's converted to 0
             }
         }
     }
@@ -260,7 +225,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     self.totalBytesReadPerDownload = 0;
     self.offsetContentLength = MAX(fileOffset, 0);
     self.totalContentLength = totalContentLength;
-    [self.outputStream setProperty:[NSNumber numberWithLongLong:_offsetContentLength] forKey:NSStreamFileCurrentOffsetKey];
+    [self.outputStream setProperty:@(_offsetContentLength) forKey:NSStreamFileCurrentOffsetKey];
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
@@ -272,6 +237,33 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
     if (self.progressiveDownloadProgress) {
         self.progressiveDownloadProgress((long long)[data length], self.totalBytesRead, self.response.expectedContentLength,self.totalBytesReadPerDownload + self.offsetContentLength, self.totalContentLength);
     }
+}
+
+#pragma mark - Static
+
++ (NSString *)cacheFolder {
+    static NSString *cacheFolder;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *cacheDir = NSTemporaryDirectory();
+        cacheFolder = [cacheDir stringByAppendingPathComponent:kAFNetworkingIncompleteDownloadFolderName];
+
+        // ensure all cache directories are there (needed only once)
+        NSError *error = nil;
+        if(![[NSFileManager new] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
+            NSLog(@"Failed to create cache directory at %@", cacheFolder);
+        }
+    });
+    return cacheFolder;
+}
+
+// calculates the MD5 hash of a key
++ (NSString *)md5StringForString:(NSString *)string {
+    const char *str = [string UTF8String];
+    unsigned char r[CC_MD5_DIGEST_LENGTH];
+    CC_MD5(str, strlen(str), r);
+    return [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+            r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[15]];
 }
 
 @end
