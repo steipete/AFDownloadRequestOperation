@@ -9,5 +9,5 @@ Pod::Spec.new do |s|
   s.requires_arc   = true
   s.source_files   = '*.{h,m}'
   s.license        = 'MIT'
-  s.dependency 'AFNetworking', '1.0.1'
+  s.dependency 'AFNetworking', :head
 end
