@@ -172,7 +172,6 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
                     _fileError = localError;
                 }
             }
-            return;
 
         // loss of network connections = error set, but not cancel
         }else if(!self.error) {
