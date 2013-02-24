@@ -1,7 +1,7 @@
 AFDownloadRequestOperation
 ==========================
 
-A progressive download operation for AFNetworking. I wrote this to support large PDF downloads in [my iOS PDF framework PSPDFKit](http://pspdfkit.com), but it works for any file type.
+A progressive download operation for AFNetworking. I wrote this to support large PDF downloads in [PSPDFKit, my commercial iOS PDF framework](http://pspdfkit.com), but it works for any file type.
 
 While AFNetworking already supports downloading files, this class has additional support to resume a partial download, uses a temporary directory and has a special block that helps with calculating the correct download progress.
 
@@ -21,7 +21,7 @@ The temporary folder will be automatically created on first access, but an be ch
 
 ### AFNetworking
 
-This is tested against the latest AFNetworking branch ([experimental-1.0RC2](https://github.com/AFNetworking/AFNetworking/tree/experimental-1.0RC2)) and uses ARC.
+This is tested against the AFNetworking 1.0/1.1 and uses ARC.
 
 
 ### Creator
