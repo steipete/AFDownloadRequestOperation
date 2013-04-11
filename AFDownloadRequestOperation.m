@@ -150,6 +150,15 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
     return fileSize;
 }
 
+#pragma mark - AFHTTPRequestOperation
+
++ (NSIndexSet *)acceptableStatusCodes {
+	NSMutableIndexSet *acceptableStatusCodes = [NSMutableIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
+	[acceptableStatusCodes addIndex:416];
+	
+	return acceptableStatusCodes;
+}
+
 #pragma mark - AFURLRequestOperation
 
 - (void)pause {
