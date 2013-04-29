@@ -51,6 +51,16 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
 
 #pragma mark - NSObject
 
+- (void)dealloc
+{
+    if (_progressiveDownloadCallbackQueue) {
+#if !OS_OBJECT_USE_OBJC
+        dispatch_release(_progressiveDownloadCallbackQueue);
+#endif
+        _progressiveDownloadCallbackQueue = NULL;
+    }
+}
+
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume {
     if ((self = [super initWithRequest:urlRequest])) {
         NSParameterAssert(targetPath != nil && urlRequest != nil);
@@ -134,6 +144,25 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
 - (void)setProgressiveDownloadProgressBlock:(void (^)(AFDownloadRequestOperation *operation, NSInteger bytesRead, long long totalBytesRead, long long totalBytesExpected, long long totalBytesReadForFile, long long totalBytesExpectedToReadForFile))block {
     self.progressiveDownloadProgress = block;
 }
+
+- (void)setProgressiveDownloadCallbackQueue:(dispatch_queue_t)progressiveDownloadCallbackQueue {
+    if (progressiveDownloadCallbackQueue != _progressiveDownloadCallbackQueue) {
+        if (_progressiveDownloadCallbackQueue) {
+#if !OS_OBJECT_USE_OBJC
+            dispatch_release(_progressiveDownloadCallbackQueue);
+#endif
+            _progressiveDownloadCallbackQueue = NULL;
+        }
+        
+        if (progressiveDownloadCallbackQueue) {
+#if !OS_OBJECT_USE_OBJC
+            dispatch_retain(progressiveDownloadCallbackQueue);
+#endif
+            _progressiveDownloadCallbackQueue = progressiveDownloadCallbackQueue;
+        }
+    }
+}
+
 
 #pragma mark - Private
 
@@ -254,7 +283,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
     self.totalBytesReadPerDownload += [data length];
 
     if (self.progressiveDownloadProgress) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_async(self.progressiveDownloadCallbackQueue ?: dispatch_get_main_queue(), ^{
             self.progressiveDownloadProgress(self,(long long)[data length], self.totalBytesRead, self.response.expectedContentLength,self.totalBytesReadPerDownload + self.offsetContentLength, self.totalContentLength);
         });
     }
