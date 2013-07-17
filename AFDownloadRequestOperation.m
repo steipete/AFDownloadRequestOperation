@@ -51,8 +51,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
 
 #pragma mark - NSObject
 
-- (void)dealloc
-{
+- (void)dealloc {
     if (_progressiveDownloadCallbackQueue) {
 #if !OS_OBJECT_USE_OBJC
         dispatch_release(_progressiveDownloadCallbackQueue);
