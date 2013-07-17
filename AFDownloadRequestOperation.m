@@ -105,7 +105,11 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
     BOOL isResuming = NO;
     if (self.shouldResume) {
         unsigned long long downloadedBytes = [self fileSizeForPath:[self tempPath]];
-        if (downloadedBytes > 0) {
+        if (downloadedBytes > 1) {
+
+            // If the the current download-request's data has been fully downloaded, but other causes of the operation failed (such as the inability of the incomplete temporary file copied to the target location), next, retry this download-request, the starting-value (equal to the incomplete temporary file size) will lead to an HTTP 416 out of range error, unless we subtract one byte here. (We don't know the final size before sending the request)
+            downloadedBytes--;
+
             NSMutableURLRequest *mutableURLRequest = [self.request mutableCopy];
             NSString *requestRange = [NSString stringWithFormat:@"bytes=%llu-", downloadedBytes];
             [mutableURLRequest setValue:requestRange forHTTPHeaderField:@"Range"];
@@ -264,7 +268,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
             NSArray *bytes = [contentRange componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" -/"]];
             if ([bytes count] == 4) {
                 fileOffset = [bytes[1] longLongValue];
-                totalContentLength = [bytes[2] longLongValue]; // if this is *, it's converted to 0
+                totalContentLength = [bytes[3] longLongValue]; // if this is *, it's converted to 0
             }
         }
     }
