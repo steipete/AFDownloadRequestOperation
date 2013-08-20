@@ -298,18 +298,19 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
 #pragma mark - Static
 
 + (NSString *)cacheFolder {
+    NSFileManager *filemgr = [NSFileManager new];
     static NSString *cacheFolder;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+
+    if (!(cacheFolder && [filemgr fileExistsAtPath:cacheFolder])) {
         NSString *cacheDir = NSTemporaryDirectory();
         cacheFolder = [cacheDir stringByAppendingPathComponent:kAFNetworkingIncompleteDownloadFolderName];
 
-        // ensure all cache directories are there (needed only once)
+        // ensure all cache directories are there
         NSError *error = nil;
-        if(![[NSFileManager new] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
+        if(![filemgr createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
             NSLog(@"Failed to create cache directory at %@", cacheFolder);
         }
-    });
+    }
     return cacheFolder;
 }
 
