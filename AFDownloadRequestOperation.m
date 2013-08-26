@@ -301,15 +301,16 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
     NSFileManager *filemgr = [NSFileManager new];
     static NSString *cacheFolder;
 
-    if (!(cacheFolder && [filemgr fileExistsAtPath:cacheFolder])) {
+    if (!cacheFolder) {
         NSString *cacheDir = NSTemporaryDirectory();
         cacheFolder = [cacheDir stringByAppendingPathComponent:kAFNetworkingIncompleteDownloadFolderName];
+    }
 
-        // ensure all cache directories are there
-        NSError *error = nil;
-        if(![filemgr createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
-            NSLog(@"Failed to create cache directory at %@", cacheFolder);
-        }
+    // ensure all cache directories are there
+    NSError *error = nil;
+    if(![filemgr createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:&error]) {
+        NSLog(@"Failed to create cache directory at %@", cacheFolder);
+        cacheFolder = nil;
     }
     return cacheFolder;
 }
