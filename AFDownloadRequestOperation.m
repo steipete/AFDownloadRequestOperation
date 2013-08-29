@@ -288,6 +288,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
             [file closeFile];
         }
         self.outputStream = [NSOutputStream outputStreamToFileAtPath:temp append:isResuming];
+        [self.outputStream open];
     }
 }
 
