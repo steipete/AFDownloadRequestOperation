@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name           = 'AFDownloadRequestOperation'
-  s.version        = '1.0.0'
+  s.version        = '2.0.0'
   s.summary        = "A progressive download operation for AFNetworking."
   s.homepage       = "https://github.com/steipete/AFDownloadRequestOperation"
   s.author         = { 'Peter Steinberger' => 'steipete@gmail.com' }
