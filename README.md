@@ -21,7 +21,7 @@ The temporary folder will be automatically created on first access, but an be ch
 
 ### AFNetworking
 
-This is tested against the AFNetworking 1.0/1.1 and uses ARC.
+This is tested against iOS 6+, AFNetworking 2.0 and uses ARC.
 
 
 ### Creator
