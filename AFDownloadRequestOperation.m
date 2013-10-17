@@ -277,17 +277,18 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
     self.offsetContentLength = MAX(fileOffset, 0);
     self.totalContentLength = totalContentLength;
     
-    // Truncate cache file to offset provided by server
-    NSString *temp = [self tempPath];
-    if ([self fileSizeForPath:temp] != _offsetContentLength) {
+    // Truncate cache file to offset provided by server.
+    // Using self.outputStream setProperty:@(_offsetContentLength) forKey:NSStreamFileCurrentOffsetKey]; will not work (in contrary to the documentation)
+    NSString *tempPath = [self tempPath];
+    if ([self fileSizeForPath:tempPath] != _offsetContentLength) {
         [self.outputStream close];
         BOOL isResuming = _offsetContentLength > 0;
         if (isResuming) {
-            NSFileHandle *file = [NSFileHandle fileHandleForWritingAtPath:temp];
+            NSFileHandle *file = [NSFileHandle fileHandleForWritingAtPath:tempPath];
             [file truncateFileAtOffset:_offsetContentLength];
             [file closeFile];
         }
-        self.outputStream = [NSOutputStream outputStreamToFileAtPath:temp append:isResuming];
+        self.outputStream = [NSOutputStream outputStreamToFileAtPath:tempPath append:isResuming];
         [self.outputStream open];
     }
 }
