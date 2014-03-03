@@ -257,6 +257,8 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
                 totalContentLength = [bytes[3] longLongValue]; // if this is *, it's converted to 0
             }
         }
+    }else if (httpResponse.statusCode != 200){
+    	return;
     }
 
     self.totalBytesReadPerDownload = 0;
