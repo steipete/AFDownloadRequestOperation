@@ -282,7 +282,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(AFDownloadReque
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data  {
-    if (![self.responseSerializer validateResponse:self.response data:nil error:NULL])
+    if (![self.responseSerializer validateResponse:self.response data:data ?: [NSData data] error:NULL])
         return; // don't write to output stream if any error occurs
 
     [super connection:connection didReceiveData:data];
