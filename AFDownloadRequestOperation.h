@@ -88,6 +88,17 @@
  */
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume;
 
+/**
+ Creates and returns an `AFDownloadRequestOperation`
+ @param urlRequest The request object to be loaded asynchronously during execution of the operation
+ @param fileIdentifier An unique file identifier to be used for the temporary filename, instead of calculating
+ 	 	it using the targetPath. Which prevents problems of the iOS supplied random container paths.
+ @param targetPath The target path (with or without file name)
+ @param shouldResume If YES, tries to resume a partial download if found.
+ @return A new download request operation
+ */
+- (id)initWithRequest:(NSURLRequest *)urlRequest fileIdentifier:(NSString *)fileIdentifier targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume;
+
 /** 
  Deletes the temporary file.
  
