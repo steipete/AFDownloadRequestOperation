@@ -1,7 +1,7 @@
 AFDownloadRequestOperation
 ==========================
 
-*** DEPRECATED AND NO LONGER MAINTAINED. USE `NSURLSession` instead.
+* DEPRECATED AND NO LONGER MAINTAINED. USE `NSURLSession` instead. *
 
 A progressive download operation for AFNetworking. I wrote this to support large PDF downloads in [PSPDFKit, my commercial iOS PDF framework](http://pspdfkit.com), but it works for any file type.
 
